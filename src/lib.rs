@@ -36,13 +36,43 @@ impl CompletionInput {
                 .parse::<u32>().map_err(|_| CompletionInputParsingError::CursorPositionNotNumber)?,
         })
     }
+
+    pub fn print_subcommand_completions<'a, T>(&self, subcommands: T)
+        where T: IntoIterator<Item = &'a str>,
+              T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
+    {
+        self.subcommand_completions(subcommands)
+            .into_iter()
+            .for_each(|subcommand| println!("{}", subcommand));
+    }
+
+    fn subcommand_completions<'a, T>(&self, subcommands: T) -> T
+        where T: IntoIterator<Item = &'a str>,
+              T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
+    {
+        subcommands
+            .into_iter()
+            .filter(|&subcommand| subcommand.starts_with(&self.current_word))
+            .collect()
+    }
 }
 
-// todo how to test this
 #[cfg(test)]
 mod tests {
+    use super::*;
+    
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn test_subcommand_completions() {
+        let input = CompletionInput {
+            command: "democli".to_string(),
+            current_word: "st".to_string(),
+            preceding_word: "democli".to_string(),
+            line: "democli st".to_string(),
+            cursor_position: 10,
+        };
+
+        let completions = input.subcommand_completions(vec!["add", "start", "stop", "delete"]);
+
+        assert_eq!(vec!["start", "stop"], completions);
     }
 }
