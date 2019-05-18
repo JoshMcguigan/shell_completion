@@ -24,7 +24,7 @@ pub enum CompletionInputParsingError {
 
 impl CompletionInput {
     /// Create a new CompletionInput by reading arguments and environment variables
-    pub fn from_args() -> Result<Self, CompletionInputParsingError> { 
+    pub fn from_args() -> Result<Self, CompletionInputParsingError> {
         let mut args = env::args().skip(1);
 
         Ok(CompletionInput {
@@ -32,15 +32,18 @@ impl CompletionInput {
             current_word: args.next().ok_or(CompletionInputParsingError::MissingArg)?,
             preceding_word: args.next().ok_or(CompletionInputParsingError::MissingArg)?,
             line: env::var("COMP_LINE").map_err(|_| CompletionInputParsingError::MissingEnvVar)?,
-            cursor_position: env::var("COMP_POINT").map_err(|_| CompletionInputParsingError::MissingEnvVar)?
-                .parse::<u32>().map_err(|_| CompletionInputParsingError::CursorPositionNotNumber)?,
+            cursor_position: env::var("COMP_POINT")
+                .map_err(|_| CompletionInputParsingError::MissingEnvVar)?
+                .parse::<u32>()
+                .map_err(|_| CompletionInputParsingError::CursorPositionNotNumber)?,
         })
     }
 
     /// Given a list of subcommands, print any that match the current word
     pub fn print_subcommand_completions<'a, T>(&self, subcommands: T)
-        where T: IntoIterator<Item = &'a str>,
-              T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
+    where
+        T: IntoIterator<Item = &'a str>,
+        T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
     {
         self.subcommand_completions(subcommands)
             .into_iter()
@@ -48,8 +51,9 @@ impl CompletionInput {
     }
 
     fn subcommand_completions<'a, T>(&self, subcommands: T) -> T
-        where T: IntoIterator<Item = &'a str>,
-              T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
+    where
+        T: IntoIterator<Item = &'a str>,
+        T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
     {
         subcommands
             .into_iter()
@@ -65,14 +69,35 @@ impl CompletionInput {
     }
 
     fn directory_completions(&self) -> Vec<String> {
-        match std::fs::read_dir("./") {
+        let current_word_parts: Vec<&str> = self.current_word.rsplitn(2, "/").collect();
+        let (root_path, partial_path) = match current_word_parts.len() {
+            2 => (current_word_parts[1], current_word_parts[0]),
+            0 | 1 => ("./", current_word_parts[0]),
+            _ => unreachable!(),
+        };
+        match std::fs::read_dir(&root_path) {
             Ok(iter) => {
-                iter
-                    .filter_map(|r| r.ok()).map(|dir| dir.path().to_string_lossy().into_owned())
-                    .map(|dir| dir.trim_start_matches("./").to_owned())
-                    .filter(|dir| dir.starts_with(&self.current_word))
-                    .collect()
-            },
+                let paths = iter
+                    .filter_map(|r| r.ok())
+                    .filter(|dir| match dir.metadata() {
+                        Ok(metadata) => metadata.is_dir(),
+                        Err(_) => false,
+                    })
+                    .map(|dir| dir.path().to_string_lossy().into_owned())
+                    .filter(|dir| {
+                        dir.rsplitn(2, "/")
+                            .next()
+                            .unwrap()
+                            .starts_with(partial_path)
+                    });
+                if self.current_word.starts_with("./") {
+                    paths.collect()
+                } else {
+                    paths
+                        .map(|p| p.trim_start_matches("./").to_string())
+                        .collect()
+                }
+            }
             Err(_) => vec![],
         }
     }
@@ -81,7 +106,7 @@ impl CompletionInput {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_subcommand_completions() {
         let input = CompletionInput {
@@ -110,5 +135,23 @@ mod tests {
         let completions = input.directory_completions();
 
         assert_eq!(vec!["src"], completions);
+    }
+
+    #[test]
+    fn test_directory_completions_project_root() {
+        let input = CompletionInput {
+            command: "democli".to_string(),
+            current_word: "./".to_string(),
+            preceding_word: "democli".to_string(),
+            line: "democli ./".to_string(),
+            cursor_position: 10,
+        };
+
+        let completions = input.directory_completions();
+
+        assert!(completions.contains(&String::from("./src")));
+        assert!(completions.contains(&String::from("./target")));
+        assert!(completions.contains(&String::from("./.git")));
+        assert_eq!(3, completions.len());
     }
 }
