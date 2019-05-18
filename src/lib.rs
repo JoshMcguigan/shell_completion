@@ -16,6 +16,7 @@ pub struct CompletionInput {
     pub cursor_position: u32,
 }
 
+#[derive(Debug)]
 pub enum CompletionInputParsingError {
     MissingArg,
     MissingEnvVar,
