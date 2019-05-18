@@ -63,12 +63,20 @@ impl CompletionInput {
 
     /// Print directory completions based on the current word
     pub fn print_directory_completions(&self) {
-        self.directory_completions()
+        self.directory_completions(false)
             .into_iter()
             .for_each(|x| println!("{}", x));
     }
 
-    fn directory_completions(&self) -> Vec<String> {
+    /// Print file completions based on the current word
+    /// Also returns directories because the user may be entering a file within that directory
+    pub fn print_file_completions(&self) {
+        self.directory_completions(true)
+            .into_iter()
+            .for_each(|x| println!("{}", x));
+    }
+
+    fn directory_completions(&self, include_files: bool) -> Vec<String> {
         let current_word_parts: Vec<&str> = self.current_word.rsplitn(2, "/").collect();
         let (root_path, partial_path) = match current_word_parts.len() {
             2 => (current_word_parts[1], current_word_parts[0]),
@@ -79,7 +87,10 @@ impl CompletionInput {
             Ok(iter) => {
                 let paths = iter
                     .filter_map(|r| r.ok())
-                    .filter(|dir| match dir.metadata() {
+                    // include_files returns files and directories
+                    //     because the user may be targeting a file which
+                    //     is several directories deep
+                    .filter(|dir| include_files || match dir.metadata() {
                         Ok(metadata) => metadata.is_dir(),
                         Err(_) => false,
                     })
@@ -132,9 +143,24 @@ mod tests {
             cursor_position: 10,
         };
 
-        let completions = input.directory_completions();
+        let completions = input.directory_completions(false);
 
         assert_eq!(vec!["src"], completions);
+    }
+
+    #[test]
+    fn test_file_completions() {
+        let input = CompletionInput {
+            command: "democli".to_string(),
+            current_word: "src/li".to_string(),
+            preceding_word: "democli".to_string(),
+            line: "democli src/li".to_string(),
+            cursor_position: 14,
+        };
+
+        let completions = input.directory_completions(true);
+
+        assert_eq!(vec!["src/lib.rs"], completions);
     }
 
     #[test]
@@ -147,7 +173,7 @@ mod tests {
             cursor_position: 10,
         };
 
-        let completions = input.directory_completions();
+        let completions = input.directory_completions(false);
 
         assert!(completions.contains(&String::from("./src")));
         assert!(completions.contains(&String::from("./target")));
