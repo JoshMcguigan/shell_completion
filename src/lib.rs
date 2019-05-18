@@ -37,6 +37,7 @@ impl CompletionInput {
         })
     }
 
+    /// Given a list of subcommands, print any that match the current word
     pub fn print_subcommand_completions<'a, T>(&self, subcommands: T)
         where T: IntoIterator<Item = &'a str>,
               T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
@@ -54,6 +55,26 @@ impl CompletionInput {
             .into_iter()
             .filter(|&subcommand| subcommand.starts_with(&self.current_word))
             .collect()
+    }
+
+    /// Print directory completions based on the current word
+    pub fn print_directory_completions(&self) {
+        self.directory_completions()
+            .into_iter()
+            .for_each(|x| println!("{}", x));
+    }
+
+    fn directory_completions(&self) -> Vec<String> {
+        match std::fs::read_dir("./") {
+            Ok(iter) => {
+                iter
+                    .filter_map(|r| r.ok()).map(|dir| dir.path().to_string_lossy().into_owned())
+                    .map(|dir| dir.trim_start_matches("./").to_owned())
+                    .filter(|dir| dir.starts_with(&self.current_word))
+                    .collect()
+            },
+            Err(_) => vec![],
+        }
     }
 }
 
@@ -74,5 +95,20 @@ mod tests {
         let completions = input.subcommand_completions(vec!["add", "start", "stop", "delete"]);
 
         assert_eq!(vec!["start", "stop"], completions);
+    }
+
+    #[test]
+    fn test_directory_completions() {
+        let input = CompletionInput {
+            command: "democli".to_string(),
+            current_word: "sr".to_string(),
+            preceding_word: "democli".to_string(),
+            line: "democli sr".to_string(),
+            cursor_position: 10,
+        };
+
+        let completions = input.directory_completions();
+
+        assert_eq!(vec!["src"], completions);
     }
 }
