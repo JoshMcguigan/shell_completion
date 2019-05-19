@@ -1,8 +1,8 @@
-use shell_completion::BashCompletionInput;
+use shell_completion::{BashCompletionInput, CompletionInput};
 
 fn main() {
     let completions = BashCompletionInput::from_args()
         .expect("Missing expected arguments and/or environment variables");
 
-    completions.print_subcommand_completions(vec!["add", "commit"]);
+    completions.complete_subcommand(vec!["add", "commit"]);
 }
