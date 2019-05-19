@@ -1,7 +1,8 @@
-use std::env;
+mod bash;
+pub use bash::BashCompletionInput;
 
 pub trait CompletionInput : Sized {
-    fn args(&self) -> &[&str];
+    fn args(&self) -> Vec<&str>;
     fn arg_index(&self) -> usize;
     fn char_index(&self) -> usize;
 
@@ -89,58 +90,6 @@ where
         Err(_) => vec![],
     }
 }
-/// BashCompletionInput is a struct which contains all the input data passed from the shell into a
-/// completion script. Data within this struct should be used by a completion script to determine
-/// appropriate completion options.
-pub struct BashCompletionInput {
-    /// Argument 1 - the name of the command whose arguments are being completed
-    pub command: String,
-    /// Argument 2 - the word under the users cursor when they pressed tab to ask for completions
-    pub current_word: String,
-    /// Argument 3 - the word preceding the word under the users cursor
-    pub preceding_word: String,
-    /// $COMP_LINE - the full text that the user has entered
-    pub line: String,
-    /// $COMP_POINT - the cursor position (a numeric index into `line`)
-    pub cursor_position: u32,
-}
-
-#[derive(Debug)]
-pub enum BashCompletionInputParsingError {
-    MissingArg,
-    MissingEnvVar,
-    CursorPositionNotNumber,
-}
-
-impl BashCompletionInput {
-    /// Create a new BashCompletionInput by reading arguments and environment variables
-    pub fn from_args() -> Result<Self, BashCompletionInputParsingError> {
-        let mut args = env::args().skip(1);
-
-        Ok(BashCompletionInput {
-            command: args.next().ok_or(BashCompletionInputParsingError::MissingArg)?,
-            current_word: args.next().ok_or(BashCompletionInputParsingError::MissingArg)?,
-            preceding_word: args.next().ok_or(BashCompletionInputParsingError::MissingArg)?,
-            line: env::var("COMP_LINE").map_err(|_| BashCompletionInputParsingError::MissingEnvVar)?,
-            cursor_position: env::var("COMP_POINT")
-                .map_err(|_| BashCompletionInputParsingError::MissingEnvVar)?
-                .parse::<u32>()
-                .map_err(|_| BashCompletionInputParsingError::CursorPositionNotNumber)?,
-        })
-    }
-}
-
-impl CompletionInput for BashCompletionInput {
-    fn args(&self) -> &[&str] {
-        unimplemented!(); 
-    }
-    fn arg_index(&self) -> usize {
-        unimplemented!();
-    }
-    fn char_index(&self) -> usize {
-        unimplemented!();
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -153,8 +102,8 @@ mod tests {
     }
 
     impl CompletionInput for TestCompletionInput {
-        fn args(&self) -> &[&str] {
-            &self.args
+        fn args(&self) -> Vec<&str> {
+            self.args.clone()
         }
         fn arg_index(&self) -> usize {
             self.arg_index
