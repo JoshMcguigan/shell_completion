@@ -69,7 +69,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_trait_impl() {
+    fn test_trait_impl_two_parts() {
         let input = BashCompletionInput {
             command: "democli".to_string(),
             current_word: "src/li".to_string(),
@@ -81,5 +81,20 @@ mod tests {
         assert_eq!(vec!["democli", "src/li"], input.args());
         assert_eq!(1, input.arg_index());
         assert_eq!(6, input.char_index());
+    }
+
+    #[test]
+    fn test_trait_impl_one_part() {
+        let input = BashCompletionInput {
+            command: "democli".to_string(),
+            current_word: "".to_string(),
+            preceding_word: "democli".to_string(),
+            line: "democli ".to_string(),
+            cursor_position: 8,
+        };
+
+        assert_eq!(vec!["democli", ""], input.args());
+        assert_eq!(1, input.arg_index());
+        assert_eq!(0, input.char_index());
     }
 }
