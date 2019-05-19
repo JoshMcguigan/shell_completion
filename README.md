@@ -1,4 +1,4 @@
-# shell_completion
+# shell_completion [![Build Status](https://api.travis-ci.org/JoshMcguigan/shell_completion.svg?branch=master)](https://travis-ci.org/JoshMcguigan/shell_completion)
 
 Shell completions, which provide auto-complete for CLI applications, are typically written in Bash. This crate provides low level primitives for writing shell completion scripts in Rust. 
 
