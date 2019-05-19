@@ -19,6 +19,8 @@ fn main() {
 
 To try it out, run `cargo install --force --path . && complete -C __democli_shell_completion democli` after cloning this repository. Then type `democli <TAB>` in the same shell. Cargo install installed two binaries, one called `democli` and the other `__democli_shell_completion`. The `complete` command registered our shell completion script for `democli`. Note that `complete` commands do not persist (they are only active in the shell where you run `complete`), so if you want to use a completion long term you'll want to add the `complete` command to your `~/.bash_profile`.
 
+See [this blog post](https://www.joshmcguigan.com/blog/shell-completions-pure-rust/) for more details.
+
 ## Users
 
 This crate is not quite ready for production use, but if you are an early adopter, feel free to make a PR adding yourself to the list below. 
