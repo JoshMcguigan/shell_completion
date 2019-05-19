@@ -1,9 +1,44 @@
 use std::env;
 
-/// CompletionInput is a struct which contains all the input data passed from the shell into a
+pub trait CompletionInput : Sized {
+    fn args(&self) -> &[&str];
+    fn arg_index(&self) -> usize;
+    fn char_index(&self) -> usize;
+
+    // Returns the current word under the users cursor 
+    // Does not include any characters after the cursor
+    fn current_word(&self) -> &str {
+        self.args()[self.arg_index()].split_at(self.char_index()).0
+    }
+    
+    /// Given a list of subcommands, print any that match the current word
+    fn complete_subcommand<'a, T>(&self, subcommands: T)
+    where
+        T: IntoIterator<Item = &'a str>,
+        T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
+    {
+        private_complete_subcommand(self, subcommands)
+            .into_iter()
+            .for_each(|subcommand| println!("{}", subcommand));
+    }
+}
+
+fn private_complete_subcommand<'a, C, T>(completion: &C, subcommands: T) -> T
+where
+    C: CompletionInput,
+    T: IntoIterator<Item = &'a str>,
+    T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
+{
+    subcommands
+        .into_iter()
+        .filter(|&subcommand| subcommand.starts_with(completion.current_word()))
+        .collect()
+}
+
+/// BashCompletionInput is a struct which contains all the input data passed from the shell into a
 /// completion script. Data within this struct should be used by a completion script to determine
 /// appropriate completion options.
-pub struct CompletionInput {
+pub struct BashCompletionInput {
     /// Argument 1 - the name of the command whose arguments are being completed
     pub command: String,
     /// Argument 2 - the word under the users cursor when they pressed tab to ask for completions
@@ -17,26 +52,26 @@ pub struct CompletionInput {
 }
 
 #[derive(Debug)]
-pub enum CompletionInputParsingError {
+pub enum BashCompletionInputParsingError {
     MissingArg,
     MissingEnvVar,
     CursorPositionNotNumber,
 }
 
-impl CompletionInput {
-    /// Create a new CompletionInput by reading arguments and environment variables
-    pub fn from_args() -> Result<Self, CompletionInputParsingError> {
+impl BashCompletionInput {
+    /// Create a new BashCompletionInput by reading arguments and environment variables
+    pub fn from_args() -> Result<Self, BashCompletionInputParsingError> {
         let mut args = env::args().skip(1);
 
-        Ok(CompletionInput {
-            command: args.next().ok_or(CompletionInputParsingError::MissingArg)?,
-            current_word: args.next().ok_or(CompletionInputParsingError::MissingArg)?,
-            preceding_word: args.next().ok_or(CompletionInputParsingError::MissingArg)?,
-            line: env::var("COMP_LINE").map_err(|_| CompletionInputParsingError::MissingEnvVar)?,
+        Ok(BashCompletionInput {
+            command: args.next().ok_or(BashCompletionInputParsingError::MissingArg)?,
+            current_word: args.next().ok_or(BashCompletionInputParsingError::MissingArg)?,
+            preceding_word: args.next().ok_or(BashCompletionInputParsingError::MissingArg)?,
+            line: env::var("COMP_LINE").map_err(|_| BashCompletionInputParsingError::MissingEnvVar)?,
             cursor_position: env::var("COMP_POINT")
-                .map_err(|_| CompletionInputParsingError::MissingEnvVar)?
+                .map_err(|_| BashCompletionInputParsingError::MissingEnvVar)?
                 .parse::<u32>()
-                .map_err(|_| CompletionInputParsingError::CursorPositionNotNumber)?,
+                .map_err(|_| BashCompletionInputParsingError::CursorPositionNotNumber)?,
         })
     }
 
@@ -115,28 +150,57 @@ impl CompletionInput {
     }
 }
 
+
+impl CompletionInput for BashCompletionInput {
+    fn args(&self) -> &[&str] {
+        unimplemented!(); 
+    }
+    fn arg_index(&self) -> usize {
+        unimplemented!();
+    }
+    fn char_index(&self) -> usize {
+        unimplemented!();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    struct TestCompletionInput {
+        args: Vec<&'static str>,
+        arg_index: usize,
+        char_index: usize,
+    }
+
+    impl CompletionInput for TestCompletionInput {
+        fn args(&self) -> &[&str] {
+            &self.args
+        }
+        fn arg_index(&self) -> usize {
+            self.arg_index
+        }
+        fn char_index(&self) -> usize {
+            self.char_index
+        }
+    }
+
     #[test]
     fn test_subcommand_completions() {
-        let input = CompletionInput {
-            command: "democli".to_string(),
-            current_word: "st".to_string(),
-            preceding_word: "democli".to_string(),
-            line: "democli st".to_string(),
-            cursor_position: 10,
+        let input = TestCompletionInput {
+            args: vec!["democli", "st"],
+            arg_index: 1,
+            char_index: 2,
         };
 
-        let completions = input.subcommand_completions(vec!["add", "start", "stop", "delete"]);
+        let completions = private_complete_subcommand(&input, vec!["add", "start", "stop", "delete"]);
 
         assert_eq!(vec!["start", "stop"], completions);
     }
 
     #[test]
     fn test_directory_completions() {
-        let input = CompletionInput {
+        let input = BashCompletionInput {
             command: "democli".to_string(),
             current_word: "sr".to_string(),
             preceding_word: "democli".to_string(),
@@ -151,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_file_completions() {
-        let input = CompletionInput {
+        let input = BashCompletionInput {
             command: "democli".to_string(),
             current_word: "src/li".to_string(),
             preceding_word: "democli".to_string(),
@@ -166,7 +230,7 @@ mod tests {
 
     #[test]
     fn test_directory_completions_project_root() {
-        let input = CompletionInput {
+        let input = BashCompletionInput {
             command: "democli".to_string(),
             current_word: "./".to_string(),
             preceding_word: "democli".to_string(),
