@@ -11,12 +11,16 @@ pub trait CompletionInput : Sized {
     fn current_word(&self) -> &str {
         self.args()[self.arg_index()].split_at(self.char_index()).0
     }
+
+    // Returns the word before the word under the users cursor
+    fn previous_word(&self) -> &str {
+        self.args()[self.arg_index() - 1]
+    }
     
     /// Given a list of subcommands, print any that match the current word
     fn complete_subcommand<'a, T>(&self, subcommands: T) -> Vec<String>
     where
         T: IntoIterator<Item = &'a str>,
-        T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
     {
         subcommands
             .into_iter()
@@ -97,6 +101,13 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_previous_word() {
+        let input = BashCompletionInput::from("democli run --bi");
+
+        assert_eq!("run", input.previous_word());
+    }
 
     #[test]
     fn test_subcommand_completions() {

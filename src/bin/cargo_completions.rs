@@ -21,27 +21,35 @@ fn complete(input: impl CompletionInput) -> Vec<String> {
 }
 
 fn complete_run(input: impl CompletionInput) -> Vec<String> {
-    let run_options = vec![
-        "--bin",
-        "--example",
-        "--package",
-        "--jobs",
+    let unary_options = vec![
         "--release",
-        "--features",
         "--all-features",
         "--no-default-features",
-        "--target",
-        "--target-dir",
-        "--manifest-path",
-        "--message-format",
         "--verbose",
         "--quiet",
-        "--color",
         "--frozen",
         "--locked",
         "--help",
     ];
-    input.complete_subcommand(run_options)
+    let other_options = vec![
+        "--bin",
+        "--example",
+        "--package",
+        "--jobs",
+        "--features",
+        "--target",
+        "--target-dir",
+        "--manifest-path",
+        "--message-format",
+        "--color",
+    ];
+    
+    if input.previous_word() == "run" || unary_options.contains(&input.previous_word()) {
+        let all_options = unary_options.into_iter().chain(other_options);
+        input.complete_subcommand(all_options)
+    } else {
+        vec![]
+    }
 }
 
 #[cfg(test)]
@@ -64,5 +72,15 @@ mod tests {
 
         assert_eq!(1, completions.len());
         assert_eq!("--bin", completions[0]);
+    }
+
+    #[test]
+    fn complete_run_option_bin_requires_name() {
+        let input = BashCompletionInput::from("cargo run --bin ");
+        let completions = complete(input);
+
+        // for now, test that this doesn't return the full list of subcommands
+        // eventually this could return the list of binary targets in the crate
+        assert_eq!(0, completions.len());
     }
 }
