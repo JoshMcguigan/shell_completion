@@ -13,43 +13,46 @@ pub trait CompletionInput : Sized {
     }
     
     /// Given a list of subcommands, print any that match the current word
-    fn complete_subcommand<'a, T>(&self, subcommands: T)
+    fn complete_subcommand<'a, T>(&self, subcommands: T) -> Vec<String>
     where
         T: IntoIterator<Item = &'a str>,
         T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
     {
-        private_complete_subcommand(self, subcommands)
+        subcommands
             .into_iter()
-            .for_each(|subcommand| println!("{}", subcommand));
+            .filter(|&subcommand| subcommand.starts_with(self.current_word()))
+            .map(|s| s.to_string())
+            .collect()
     }
 
     /// Print directory completions based on the current word
-    fn complete_directory(&self) {
+    fn complete_directory(&self) -> Vec<String> {
         private_complete_directory(self, false)
-            .into_iter()
-            .for_each(|x| println!("{}", x));
     }
 
     /// Print file completions based on the current word
     /// Also returns directories because the user may be entering a file within that directory
-    fn complete_file(&self) {
+    fn complete_file(&self) -> Vec<String> {
         private_complete_directory(self, true)
-            .into_iter()
-            .for_each(|x| println!("{}", x));
     }
 }
 
-fn private_complete_subcommand<'a, C, T>(completion: &C, subcommands: T) -> T
-where
-    C: CompletionInput,
-    T: IntoIterator<Item = &'a str>,
-    T: std::iter::FromIterator<<T as std::iter::IntoIterator>::Item>,
-{
-    subcommands
-        .into_iter()
-        .filter(|&subcommand| subcommand.starts_with(completion.current_word()))
-        .collect()
+pub trait CompletionSet {
+    fn suggest(self);
 }
+
+impl<'a, T, U> CompletionSet for T 
+where
+    T: IntoIterator<Item = U>,
+    U: std::fmt::Display,
+{
+    fn suggest(self) {
+        self
+            .into_iter()
+            .for_each(|completion| println!("{}", completion));
+    }
+}
+
 
 fn private_complete_directory<C>(completion: &C, include_files: bool) -> Vec<String> 
 where
@@ -95,72 +98,38 @@ where
 mod tests {
     use super::*;
 
-    struct TestCompletionInput {
-        args: Vec<&'static str>,
-        arg_index: usize,
-        char_index: usize,
-    }
-
-    impl CompletionInput for TestCompletionInput {
-        fn args(&self) -> Vec<&str> {
-            self.args.clone()
-        }
-        fn arg_index(&self) -> usize {
-            self.arg_index
-        }
-        fn char_index(&self) -> usize {
-            self.char_index
-        }
-    }
-
     #[test]
     fn test_subcommand_completions() {
-        let input = TestCompletionInput {
-            args: vec!["democli", "st"],
-            arg_index: 1,
-            char_index: 2,
-        };
+        let input = BashCompletionInput::from("democli st");
 
-        let completions = private_complete_subcommand(&input, vec!["add", "start", "stop", "delete"]);
+        let completions =input.complete_subcommand(vec!["add", "start", "stop", "delete"]);
 
         assert_eq!(vec!["start", "stop"], completions);
     }
 
     #[test]
     fn test_directory_completions() {
-        let input = TestCompletionInput {
-            args: vec!["democli", "sr"],
-            arg_index: 1,
-            char_index: 2,
-        };
+        let input = BashCompletionInput::from("democli sr");
 
-        let completions = private_complete_directory(&input, false);
+        let completions = input.complete_directory();
 
         assert_eq!(vec!["src"], completions);
     }
 
     #[test]
     fn test_file_completions() {
-        let input = TestCompletionInput {
-            args: vec!["democli", "src/li"],
-            arg_index: 1,
-            char_index: 6,
-        };
+        let input = BashCompletionInput::from("democli src/li");
 
-        let completions = private_complete_directory(&input, true);
+        let completions = input.complete_file();
 
         assert_eq!(vec!["src/lib.rs"], completions);
     }
 
     #[test]
     fn test_directory_completions_project_root() {
-        let input = TestCompletionInput {
-            args: vec!["democli", "./"],
-            arg_index: 1,
-            char_index: 2,
-        };
+        let input = BashCompletionInput::from("democli ./");
 
-        let completions = private_complete_directory(&input, false);
+        let completions = input.complete_directory();
 
         assert!(completions.contains(&String::from("./src")));
         assert!(completions.contains(&String::from("./target")));
