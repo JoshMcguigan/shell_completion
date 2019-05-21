@@ -7,17 +7,21 @@ Shell completions, which provide auto-complete for CLI applications, are typical
 Shell completion scripts are written as normal Rust binaries. A minimal example is below:
 
 ```rust
-use shell_completion::CompletionInput;
+use shell_completion::{BashCompletionInput, CompletionInput, CompletionSet};
 
 fn main() {
-    let completions = CompletionInput::from_args()
+    let input = BashCompletionInput::from_args()
         .expect("Missing expected arguments and/or environment variables");
 
-    completions.print_subcommand_completions(vec!["add", "commit"]);
+    let completions = input.complete_subcommand(vec!["add", "commit"]);
+
+    completions.suggest();
 }
 ```
 
-To try it out, run `cargo install --force --path . && complete -C __democli_shell_completion democli` after cloning this repository. Then type `democli <TAB>` in the same shell. Cargo install installed two binaries, one called `democli` and the other `__democli_shell_completion`. The `complete` command registered our shell completion script for `democli`. Note that `complete` commands do not persist (they are only active in the shell where you run `complete`), so if you want to use a completion long term you'll want to add the `complete` command to your `~/.bash_profile`.
+A more advanced example is available in `src/bin/cargo_completions.rs`. To try it out, run `cargo install --force --path . && complete -C _cargo_completions cargo`, then type `cargo run --<TAB` in the same shell.
+
+The `complete` command registered our shell completion script for `cargo`. Note that `complete` commands do not persist (they are only active in the shell where you run `complete`), so if you want to use a completion long term you'll want to add the `complete` command to your `~/.bash_profile`.
 
 See [this blog post](https://www.joshmcguigan.com/blog/shell-completions-pure-rust/) for more details.
 

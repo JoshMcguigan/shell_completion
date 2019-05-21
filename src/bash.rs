@@ -31,7 +31,7 @@ impl BashCompletionInput {
     }
 }
 
-#[cfg(test)]
+/// Used only for unit testing
 impl<T> From<T> for BashCompletionInput
 where
     T: Into<String>,

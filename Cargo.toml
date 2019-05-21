@@ -10,3 +10,7 @@ keywords = ["cli", "completion", "autocomplete"]
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+
+[[bin]]
+name = "_cargo_completions"
+path = "src/bin/cargo_completions.rs"
