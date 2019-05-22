@@ -44,7 +44,10 @@ fn complete_run(input: impl CompletionInput) -> Vec<String> {
         "--color",
     ];
     
-    if input.previous_word() == "run" || unary_options.contains(&input.previous_word()) {
+    if input.previous_word() == "run" 
+        || !input.previous_word().starts_with("-")
+        || unary_options.contains(&input.previous_word()) 
+    {
         let all_options = unary_options.into_iter().chain(other_options);
         input.complete_subcommand(all_options)
     } else {
@@ -128,5 +131,14 @@ mod tests {
         assert_eq!("auto", completions[0]);
         assert_eq!("always", completions[1]);
         assert_eq!("never", completions[2]);
+    }
+
+    #[test]
+    fn complete_run_option_chaining() {
+        let input = BashCompletionInput::from("cargo run --color auto --manif");
+        let completions = complete(input);
+
+        assert_eq!(1, completions.len());
+        assert_eq!("--manifest-path", completions[0]);
     }
 }
