@@ -14,6 +14,7 @@ fn complete(input: impl CompletionInput) -> Vec<String> {
         _ => {
             match input.args()[1] {
                 "run" => complete_run(input),
+                "test" => complete_test(input),
                 _ => vec![],
             }
         },
@@ -35,6 +36,62 @@ fn complete_run(input: impl CompletionInput) -> Vec<String> {
         "--bin",
         "--example",
         "--package",
+        "--jobs",
+        "--features",
+        "--target",
+        "--target-dir",
+        "--manifest-path",
+        "--message-format",
+        "--color",
+    ];
+    
+    if input.previous_word() == "run" 
+        || !input.previous_word().starts_with("-")
+        || unary_options.contains(&input.previous_word()) 
+    {
+        let all_options = unary_options.into_iter().chain(other_options);
+        input.complete_subcommand(all_options)
+    } else {
+        match input.previous_word() {
+            "--target-dir" => input.complete_directory(),
+            "--manifest-path" => input.complete_file(),
+            "--message-format" => input.complete_subcommand(vec!["human", "json", "short"]),
+            "--color" => input.complete_subcommand(vec!["auto", "always", "never"]),
+            _ => vec![],
+        }
+    }
+}
+
+// TODO find an appropriate abstraction to solve duplication between complete_run and complete_test
+fn complete_test(input: impl CompletionInput) -> Vec<String> {
+    let unary_options = vec![
+        "--lib",
+        "--bins",
+        "--examples",
+        "--tests",
+        "--benches",
+        "--all-targets",
+        "--doc",
+        "--no-run",
+        "--no-fail-fast",
+        "--all",
+        "--jobs",
+        "--release",
+        "--all-features",
+        "--no-default-features",
+        "--verbose",
+        "--quiet",
+        "--frozen",
+        "--locked",
+        "--help",
+    ];
+    let other_options = vec![
+        "--bin",
+        "--example",
+        "--test",
+        "--bench",
+        "--package",
+        "--exclude",
         "--jobs",
         "--features",
         "--target",
@@ -140,5 +197,23 @@ mod tests {
 
         assert_eq!(1, completions.len());
         assert_eq!("--manifest-path", completions[0]);
+    }
+
+    #[test]
+    fn complete_subcommand_test() {
+        let input = BashCompletionInput::from("cargo tes");
+        let completions = complete(input);
+
+        assert_eq!(1, completions.len());
+        assert_eq!("test", completions[0]);
+    }
+
+    #[test]
+    fn complete_test_option_lib() {
+        let input = BashCompletionInput::from("cargo test --li");
+        let completions = complete(input);
+
+        assert_eq!(1, completions.len());
+        assert_eq!("--lib", completions[0]);
     }
 }
