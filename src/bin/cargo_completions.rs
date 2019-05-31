@@ -10,7 +10,7 @@ fn main() {
 fn complete(input: impl CompletionInput) -> Vec<String> {
     match input.arg_index() {
         0 => unreachable!(),
-        1 => input.complete_subcommand(vec!["run", "test"]), // todo also include cargo-subcommands on path
+        1 => complete_cargo_commands(input),
         _ => {
             match input.args()[1] {
                 "run" => complete_run(input),
@@ -19,6 +19,20 @@ fn complete(input: impl CompletionInput) -> Vec<String> {
             }
         },
     }
+}
+
+fn complete_cargo_commands(input: impl CompletionInput) -> Vec<String> {
+    use std::process::Command;
+    let output = Command::new("cargo")
+            .arg("--list")
+            .output()
+            .expect("failed to execute cargo");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let cargo_commands : Vec<&str> = stdout.lines()
+        .skip(1) // first line is description
+        .map(|line| line.split_whitespace().next().unwrap()) // each line is COMMAND DESCRIPTION
+        .collect();
+    input.complete_subcommand(cargo_commands) 
 }
 
 fn complete_run(input: impl CompletionInput) -> Vec<String> {
@@ -123,12 +137,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn complete_subcommand_run() {
-        let input = BashCompletionInput::from("cargo ru");
+    fn complete_subcommand_fetch() {
+        let input = BashCompletionInput::from("cargo fe");
         let completions = complete(input);
 
         assert_eq!(1, completions.len());
-        assert_eq!("run", completions[0]);
+        assert_eq!("fetch", completions[0]);
     }
 
     #[test]
