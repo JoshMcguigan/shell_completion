@@ -1,7 +1,7 @@
 use shell_completion::{BashCompletionInput, CompletionInput, CompletionSet};
 
 fn main() {
-    let input = BashCompletionInput::from_args()
+    let input = BashCompletionInput::from_env()
         .expect("Missing expected arguments and/or environment variables");
 
     complete(input).suggest();

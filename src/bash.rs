@@ -19,8 +19,8 @@ pub enum BashCompletionInputParsingError {
 }
 
 impl BashCompletionInput {
-    /// Create a new BashCompletionInput by reading arguments and environment variables
-    pub fn from_args() -> Result<Self, BashCompletionInputParsingError> {
+    /// Create a new BashCompletionInput by reading environment variables
+    pub fn from_env() -> Result<Self, BashCompletionInputParsingError> {
         Ok(BashCompletionInput {
             line: env::var("COMP_LINE").map_err(|_| BashCompletionInputParsingError::MissingEnvVar)?,
             cursor_position: env::var("COMP_POINT")
