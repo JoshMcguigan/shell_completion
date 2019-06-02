@@ -143,8 +143,6 @@ mod tests {
         let completions = input.complete_directory();
 
         assert!(completions.contains(&String::from("./src")));
-        assert!(completions.contains(&String::from("./target")));
-        assert!(completions.contains(&String::from("./.git")));
-        assert_eq!(3, completions.len());
+        assert_eq!(1, completions.len());
     }
 }

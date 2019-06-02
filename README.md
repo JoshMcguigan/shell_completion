@@ -10,8 +10,8 @@ Shell completion scripts are written as normal Rust binaries. A minimal example 
 use shell_completion::{BashCompletionInput, CompletionInput, CompletionSet};
 
 fn main() {
-    let input = BashCompletionInput::from_args()
-        .expect("Missing expected arguments and/or environment variables");
+    let input = BashCompletionInput::from_env()
+        .expect("Missing expected environment variables");
 
     let completions = input.complete_subcommand(vec!["add", "commit"]);
 
@@ -19,7 +19,7 @@ fn main() {
 }
 ```
 
-A more advanced example is available in `src/bin/cargo_completions.rs`. To try it out, run `cargo install --force --path . && complete -C _cargo_completions cargo`, then type `cargo run --<TAB>` in the same shell.
+A more advanced example is available in the `cargo_completion` crate within this workspace. To try it out, run `cargo install --force --path cargo_completion/ && complete -C _cargo_completion cargo`, then type `cargo run --<TAB>` in the same shell.
 
 The `complete` command registered our shell completion script for `cargo`. Note that `complete` commands do not persist (they are only active in the shell where you run `complete`), so if you want to use a completion long term you'll want to add the `complete` command to your `~/.bash_profile`.
 

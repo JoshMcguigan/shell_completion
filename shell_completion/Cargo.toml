@@ -1,0 +1,12 @@
+[package]
+name = "shell_completion"
+version = "0.0.1"
+authors = ["Josh Mcguigan"]
+edition = "2018"
+description = "Write shell completion scripts in pure Rust"
+repository = "https://github.com/JoshMcguigan/shell_completion"
+readme = "../README.md"
+keywords = ["cli", "completion", "autocomplete"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
