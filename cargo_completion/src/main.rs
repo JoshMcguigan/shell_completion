@@ -67,6 +67,7 @@ fn complete_run(input: impl CompletionInput) -> Vec<String> {
         input.complete_subcommand(all_options)
     } else {
         match input.previous_word() {
+            "--example" => complete_examples(input),
             "--target-dir" => input.complete_directory(),
             "--manifest-path" => input.complete_file(),
             "--message-format" => input.complete_subcommand(vec!["human", "json", "short"]),
@@ -76,7 +77,21 @@ fn complete_run(input: impl CompletionInput) -> Vec<String> {
     }
 }
 
-// TODO find an appropriate abstraction to solve duplication between complete_run and complete_test
+fn complete_examples(input: impl CompletionInput) -> Vec<String> {
+    use std::process::Command;
+    let output = Command::new("cargo")
+            .arg("run")
+            .arg("--example")
+            .output()
+            .expect("failed to execute cargo");
+    let stdout = String::from_utf8_lossy(&output.stderr);
+    let examples: Vec<&str> = stdout.lines()
+        .skip(2) // first two lines are human readable
+        .map(|line| line.trim()) // each line is an example surrounded by whitespace
+        .collect();
+    input.complete_subcommand(examples) 
+}
+
 fn complete_test(input: impl CompletionInput) -> Vec<String> {
     let unary_options = vec![
         "--lib",
