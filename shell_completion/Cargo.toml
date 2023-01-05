@@ -1,6 +1,6 @@
 [package]
 name = "shell_completion"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Josh Mcguigan"]
 edition = "2018"
 description = "Write shell completion scripts in pure Rust"
