@@ -1,32 +1,41 @@
 use std::env;
 
 use crate::CompletionInput;
+use crate::split::{Split, SplitError};
 
 /// BashCompletionInput is a struct which contains input data passed from the shell into a
 /// completion script. Data within this struct should be used by a completion script to determine
 /// appropriate completion options.
 pub struct BashCompletionInput {
-    /// $COMP_LINE - the full text that the user has entered
-    line: String,
-    /// $COMP_POINT - the cursor position (a numeric index into `line`)
-    cursor_position: usize,
+    split: Split
 }
 
 #[derive(Debug)]
 pub enum BashCompletionInputParsingError {
     MissingEnvVar,
     CursorPositionNotNumber,
+    SplitError(SplitError),
 }
 
 impl BashCompletionInput {
     /// Create a new BashCompletionInput by reading environment variables
     pub fn from_env() -> Result<Self, BashCompletionInputParsingError> {
+        let line = env::var("COMP_LINE").map_err(|_| BashCompletionInputParsingError::MissingEnvVar)?;
+        let cursor_position = env::var("COMP_POINT")
+            .map_err(|_| BashCompletionInputParsingError::MissingEnvVar)?
+            .parse::<usize>()
+            .map_err(|_| BashCompletionInputParsingError::CursorPositionNotNumber)?;
         Ok(BashCompletionInput {
-            line: env::var("COMP_LINE").map_err(|_| BashCompletionInputParsingError::MissingEnvVar)?,
-            cursor_position: env::var("COMP_POINT")
-                .map_err(|_| BashCompletionInputParsingError::MissingEnvVar)?
-                .parse::<usize>()
-                .map_err(|_| BashCompletionInputParsingError::CursorPositionNotNumber)?,
+            split: Split::new(&line, cursor_position)
+                .map_err(BashCompletionInputParsingError::SplitError)?,
+        })
+    }
+
+    /// Create a new BashCompletionInput manually, useful for testing
+    pub fn new(line: &str, cursor_position: usize) -> Result<Self, BashCompletionInputParsingError> {
+        Ok(BashCompletionInput {
+            split: Split::new(line, cursor_position)
+                .map_err(BashCompletionInputParsingError::SplitError)?,
         })
     }
 }
@@ -41,30 +50,20 @@ where
         let cursor_position = line.len();
 
         BashCompletionInput {
-            line, 
-            cursor_position,
+            split: Split::new(&line, cursor_position).unwrap(),
         }
     }
 }
 
 impl CompletionInput for BashCompletionInput {
     fn args(&self) -> Vec<&str> {
-        // todo this should perform a more sophisticated bash parsing
-        self.line.split(" ").collect()
+        self.split.words.iter().map(|w| w.as_str()).collect()
     }
     fn arg_index(&self) -> usize {
-        self.line.split_at(self.cursor_position).0
-            .chars()
-            .filter(|c| *c == ' ')
-            .count()
+        self.split.current_word
     }
     fn char_index(&self) -> usize {
-        let start = self.line.split_at(self.cursor_position).0;
-        let current_word_fraction = start.rsplitn(2, ' ').next();
-        match current_word_fraction {
-            Some(word) => word.len(),
-            None => unreachable!(),
-        }
+        self.split.current_character
     }
 }
 

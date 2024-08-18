@@ -1,4 +1,5 @@
 mod bash;
+mod split;
 pub use bash::BashCompletionInput;
 
 pub trait CompletionInput : Sized {
@@ -17,7 +18,7 @@ pub trait CompletionInput : Sized {
         self.args()[self.arg_index() - 1]
     }
     
-    /// Given a list of subcommands, print any that match the current word
+    /// Given a list of subcommands, filter any that match the current word
     fn complete_subcommand<'a, T>(&self, subcommands: T) -> Vec<String>
     where
         T: IntoIterator<Item = &'a str>,
@@ -29,12 +30,12 @@ pub trait CompletionInput : Sized {
             .collect()
     }
 
-    /// Print directory completions based on the current word
+    /// Get directory completions based on the current word
     fn complete_directory(&self) -> Vec<String> {
         private_complete_directory(self, false)
     }
 
-    /// Print file completions based on the current word
+    /// Get file completions based on the current word
     /// Also returns directories because the user may be entering a file within that directory
     fn complete_file(&self) -> Vec<String> {
         private_complete_directory(self, true)
